@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="ko" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>스미싱 변종 문구 & 차단 패턴 생성기</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            900: '#0c4a6e',
+                        },
+                        cyber: {
+                            dark: '#0f172a',
+                            card: '#1e293b',
+                            border: '#334155',
+                            accent: '#38bdf8',
+                            danger: '#f43f5e',
+                            success: '#10b981',
+                            warning: '#f59e0b'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'Pretendard', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'Fira Code', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+        .highlight-match {
+            background-color: rgba(244, 63, 94, 0.25);
+            border-bottom: 2px solid #f43f5e;
+            color: #fecdd3;
+            font-weight: 600;
+            padding: 0 2px;
+            border-radius: 2px;
+        }
+        .glow-accent {
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.15);
+        }
+    </style>
+</head>
+<body class="bg-cyber-dark text-slate-200 font-sans min-h-screen flex flex-col antialiased selection:bg-brand-500 selection:text-white">
+
+    <!-- Navigation Header -->
+    <header class="border-b border-cyber-border bg-slate-900/80 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-cyan-400 flex items-center justify-center text-slate-950 font-bold text-xl shadow-lg shadow-cyan-500/20">
+                    <i class="fa-solid font-mono fa-shield-cat"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg text-white leading-tight flex items-center gap-2">
+                        스미싱 변종 문구 & 패턴 생성기
+                        <span class="text-xs font-normal px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">v2.4 SecOps</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">Smishing Variant & Regex Policy Generation Workbench</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <button onclick="loadPreset('courier')" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition flex items-center gap-1.5">
+                    <i class="fa-solid text-cyan-400 fa-box-archive"></i> 택배 스미싱
+                </button>
+                <button onclick="loadPreset('gov')" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition flex items-center gap-1.5">
+                    <i class="fa-solid text-emerald-400 fa-building-columns"></i> 국민비서/국세청
+                </button>
+                <button onclick="loadPreset('traffic')" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition flex items-center gap-1.5">
+                    <i class="fa-solid text-amber-400 fa-car-burst"></i> 교통범칙금
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Body -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- LEFT PANEL: Input & Rule Controls (5 Cols) -->
+        <section class="lg:col-span-5 flex flex-col gap-5">
+            
+            <!-- Step 1: Input Smishing Text -->
+            <div class="bg-cyber-card border border-cyber-border rounded-xl p-5 shadow-sm">
+                <div class="flex items-center justify-between mb-3">
+                    <label class="text-sm font-semibold text-white flex items-center gap-2">
+                        <span class="w-5 h-5 rounded-full bg-brand-500/20 text-brand-400 text-xs flex items-center justify-center font-bold">1</span>
+                        원본 스미싱 의심 문구
+                    </label>
+                    <button onclick="clearInput()" class="text-xs text-slate-400 hover:text-rose-400 transition">
+                        <i class="fa-solid fa-rotate-left mr-1"></i>초기화
+                    </button>
+                </div>
+                
+                <textarea id="smishingInput" rows="4" 
+                    class="w-full bg-slate-900/90 border border-slate-700 rounded-lg p-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition font-mono"
+                    placeholder="예: [국민비서] 교통범칙금 미납 통지서 안내. 내용 확인: http://korea-gov.top/case"></textarea>
+
+                <!-- Keywords extraction chips -->
+                <div class="mt-3">
+                    <div class="flex items-center justify-between text-xs text-slate-400 mb-1.5">
+                        <span>자동 감지 핵심 키워드:</span>
+                        <span id="keywordCount" class="text-brand-400 font-mono">0개 감지</span>
+                    </div>
+                    <div id="keywordChips" class="flex flex-wrap gap-1.5 min-h-[32px] p-2 bg-slate-900/50 rounded-lg border border-slate-800">
+                        <span class="text-xs text-slate-500 italic py-0.5">문구를 입력하면 핵심 차단 단어가 추출됩니다.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Evasion Mutation Settings -->
+            <div class="bg-cyber-card border border-cyber-border rounded-xl p-5 shadow-sm">
+                <label class="text-sm font-semibold text-white flex items-center gap-2 mb-3">
+                    <span class="w-5 h-5 rounded-full bg-brand-500/20 text-brand-400 text-xs flex items-center justify-center font-bold">2</span>
+                    공격자 우회(난독화) 패턴 설정
+                </label>
+
+                <div class="space-y-3 text-xs">
+                    <!-- Toggle 1: Special Chars / Separators -->
+                    <label class="flex items-start justify-between p-2.5 rounded-lg bg-slate-900/60 border border-slate-800 cursor-pointer hover:border-slate-700 transition">
+                        <div>
+                            <div class="font-medium text-slate-200">특수문자 및 기호 삽입 우회</div>
+                            <div class="text-slate-400 text-[11px] mt-0.5">음절 사이에 특수기호/공백/가상문자 삽입 (예: 국.민.비.서, 국_민_비_서)</div>
+                        </div>
+                        <input type="checkbox" id="optSpecialChars" checked class="mt-1 rounded bg-slate-800 border-slate-700 text-brand-500 focus:ring-brand-500">
+                    </label>
+
+                    <!-- Toggle 2: Hangul Jamo Separation -->
+                    <label class="flex items-start justify-between p-2.5 rounded-lg bg-slate-900/60 border border-slate-800 cursor-pointer hover:border-slate-700 transition">
+                        <div>
+                            <div class="font-medium text-slate-200">한글 자음/모음 분리 (초성-중성-종성)</div>
+                            <div class="text-slate-400 text-[11px] mt-0.5">필터링 회피용 조합형 텍스트 생성 (예: ㄱㅜㄱㅁㅣㄴ, 국ㅁㅣㄴ)</div>
+                        </div>
+                        <input type="checkbox" id="optJamo" checked class="mt-1 rounded bg-slate-800 border-slate-700 text-brand-500 focus:ring-brand-500">
+                    </label>
+
+                    <!-- Toggle 3: Similar Phonetics & Typos -->
+                    <label class="flex items-start justify-between p-2.5 rounded-lg bg-slate-900/60 border border-slate-800 cursor-pointer hover:border-slate-700 transition">
+                        <div>
+                            <div class="font-medium text-slate-200">유사 음절 & 오탈자 교체</div>
+                            <div class="text-slate-400 text-[11px] mt-0.5">발음이 비슷하거나 자형이 유사한 글자 대체 (예: 택배➔탞배, 배송➔뱨송)</div>
+                        </div>
+                        <input type="checkbox" id="optTypo" checked class="mt-1 rounded bg-slate-800 border-slate-700 text-brand-500 focus:ring-brand-500">
+                    </label>
+
+                    <!-- Toggle 4: URL & Domain Obfuscation -->
+                    <label class="flex items-start justify-between p-2.5 rounded-lg bg-slate-900/60 border border-slate-800 cursor-pointer hover:border-slate-700 transition">
+                        <div>
+                            <div class="font-medium text-slate-200">악성 URL & TLD 피싱 패턴 포함</div>
+                            <div class="text-slate-400 text-[11px] mt-0.5">단축 URL, IP형식, 피싱 전용 TLD(.top, .xyz, .me, .icu 등) 와일드카드 정규화</div>
+                        </div>
+                        <input type="checkbox" id="optUrl" checked class="mt-1 rounded bg-slate-800 border-slate-700 text-brand-500 focus:ring-brand-500">
+                    </label>
+
+                    <!-- Regex Sensitivity Slider -->
+                    <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-800">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="font-medium text-slate-200">정규식 차단 강도 (Sensitivity)</span>
+                            <span id="sensitivityLabel" class="text-brand-400 font-mono text-[11px]">권장 (Balanced)</span>
+                        </div>
+                        <input type="range" id="sensitivityRange" min="1" max="3" value="2" 
+                            class="w-full accent-brand-500 h-1.5 bg-slate-700 rounded-lg cursor-pointer">
+                        <div class="flex justify-between text-[10px] text-slate-500 mt-1">
+                            <span>엄격 (Strict)</span>
+                            <span>균형 (Balanced)</span>
+                            <span>광범위 (Aggressive)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="generateAll()" class="mt-4 w-full py-3 px-4 bg-gradient-to-r from-brand-600 to-cyan-500 hover:from-brand-500 hover:to-cyan-400 text-slate-950 font-bold rounded-lg shadow-lg shadow-brand-500/20 transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-wand-magic-sparkles text-lg"></i>
+                    변종 문구 및 차단 정규식 생성하기
+                </button>
+            </div>
+
+        </section>
+
+        <!-- RIGHT PANEL: Result Tabs & Workbench (7 Cols) -->
+        <section class="lg:col-span-7 flex flex-col gap-5">
+
+            <!-- Navigation Tabs -->
+            <div class="flex items-center justify-between border-b border-cyber-border pb-1">
+                <nav class="flex space-x-2">
+                    <button id="tabBtn1" onclick="switchTab('regex')" class="px-4 py-2 text-xs font-semibold rounded-t-lg bg-cyber-card border-t border-x border-cyber-border text-brand-400 flex items-center gap-2">
+                        <i class="fa-solid fa-code"></i> 차단 정규식 (Regex Rules)
+                    </button>
+                    <button id="tabBtn2" onclick="switchTab('variants')" class="px-4 py-2 text-xs font-semibold rounded-t-lg bg-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2">
+                        <i class="fa-solid fa-dna"></i> 생성된 변종 문구 (<span id="variantBadgeCount">0</span>)
+                    </button>
+                    <button id="tabBtn3" onclick="switchTab('sandbox')" class="px-4 py-2 text-xs font-semibold rounded-t-lg bg-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2">
+                        <i class="fa-solid fa-vial"></i> 실시간 탐지 테스트
+                    </button>
+                </nav>
+
+                <div class="flex items-center gap-2 pb-1">
+                    <button onclick="exportData('csv')" class="px-2.5 py-1 text-xs rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center gap-1 transition">
+                        <i class="fa-solid fa-file-csv text-emerald-400"></i> CSV
+                    </button>
+                    <button onclick="exportData('snort')" class="px-2.5 py-1 text-xs rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center gap-1 transition">
+                        <i class="fa-solid fa-shield-halved text-amber-400"></i> Snort/Suricata
+                    </button>
+                </div>
+            </div>
+
+            <!-- TAB 1: REGEX RULES OUTPUT -->
+            <div id="tabRegex" class="space-y-4">
+                
+                <!-- Universal Standard PCRE Regex -->
+                <div class="bg-cyber-card border border-cyber-border rounded-xl p-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs font-bold text-slate-200 flex items-center gap-2">
+                            <i class="fa-brands fa-python text-brand-400"></i> 표준 PCRE / Python 정규표현식
+                        </span>
+                        <button onclick="copyToClipboard('pcreRegexOutput')" class="text-xs text-brand-400 hover:text-brand-300 flex items-center gap-1">
+                            <i class="fa-regular fa-copy"></i> 복사
+                        </button>
+                    </div>
+                    <div class="relative">
+                        <pre id="pcreRegexOutput" class="bg-slate-900 border border-slate-800 rounded-lg p-3 text-xs font-mono text-cyan-300 overflow-x-auto whitespace-pre-wrap break-all select-all">규칙을 생성하려면 좌측의 [생성하기] 버튼을 누르세요.</pre>
+                    </div>
+                </div>
+
+                <!-- Telecom/SMS Gateway Rule Format -->
+                <div class="bg-cyber-card border border-cyber-border rounded-xl p-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs font-bold text-slate-200 flex items-center gap-2">
+                            <i class="fa-solid fa-tower-cell text-emerald-400"></i> 이동통신사 / SMS 필터링 등록용 차단 키워드 (KISA 규격)
+                        </span>
+                        <button onclick="copyToClipboard('smsGatewayOutput')" class="text-xs text-brand-400 hover:text-brand-300 flex items-center gap-1">
+                            <i class="fa-regular fa-copy"></i> 복사
+                        </button>
+                    </div>
+                    <div class="relative">
+                        <pre id="smsGatewayOutput" class="bg-slate-900 border border-slate-800 rounded-lg p-3 text-xs font-mono text-slate-300 overflow-x-auto whitespace-pre-wrap break-all select-all">-</pre>
+                    </div>
+                </div>
+
+                <!-- Snort / Suricata IDPS Rule -->
+                <div class="bg-cyber-card border border-cyber-border rounded-xl p-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs font-bold text-slate-200 flex items-center gap-2">
+                            <i class="fa-solid fa-network-wired text-amber-400"></i> Network IDPS Rule (Snort / Suricata)
+                        </span>
+                        <button onclick="copyToClipboard('snortRuleOutput')" class="text-xs text-brand-400 hover:text-brand-300 flex items-center gap-1">
+                            <i class="fa-regular fa-copy"></i> 복사
+                        </button>
+                    </div>
+                    <div class="relative">
+                        <pre id="snortRuleOutput" class="bg-slate-900 border border-slate-800 rounded-lg p-3 text-xs font-mono text-amber-200/90 overflow-x-auto whitespace-pre-wrap break-all select-all">-</pre>
+                    </div>
+                </div>
+
+                <!-- Pattern Risk & Entropy Statistics -->
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-3 text-center">
+                        <div class="text-[11px] text-slate-400">예상 우회 차단율</div>
+                        <div id="statCoverage" class="text-lg font-bold text-emerald-400 mt-0.5">99.4%</div>
+                    </div>
+                    <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-3 text-center">
+                        <div class="text-[11px] text-slate-400">생성된 난독화 경우의 수</div>
+                        <div id="statVariantsCount" class="text-lg font-bold text-cyan-400 mt-0.5">0개</div>
+                    </div>
+                    <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-3 text-center">
+                        <div class="text-[11px] text-slate-400">정밀도 에러 위험도</div>
+                        <div id="statFalsePositive" class="text-lg font-bold text-brand-400 mt-0.5">낮음 (0.2%)</div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- TAB 2: SYNTHETIC MUTATED VARIANTS LIST -->
+            <div id="tabVariants" class="hidden space-y-3">
+                <div class="bg-cyber-card border border-cyber-border rounded-xl p-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="text-xs font-semibold text-slate-200">공격자가 생성할 가능성이 높은 예측 변종 문구 리스트</div>
+                        <button onclick="copyAllVariants()" class="text-xs text-brand-400 hover:text-brand-300 flex items-center gap-1">
+                            <i class="fa-regular fa-copy"></i> 전체 리스트 복사
+                        </button>
+                    </div>
+                    <div class="overflow-y-auto max-h-[420px] border border-slate-800 rounded-lg bg-slate-900/90 divide-y divide-slate-800/60" id="variantsContainer">
+                        <div class="p-4 text-center text-xs text-slate-500">생성된 변종 문구가 여기에 표시됩니다.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: LIVE REGEX DETECTION TESTER (SANDBOX) -->
+            <div id="tabSandbox" class="hidden space-y-4">
+                <div class="bg-cyber-card border border-cyber-border rounded-xl p-4">
+                    <h3 class="text-xs font-bold text-slate-200 mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-microscope text-brand-400"></i> 실시간 스미싱 탐지 시뮬레이션
+                    </h3>
+                    <p class="text-xs text-slate-400 mb-3">의심되는 신규 수신 문자메시지를 아래에 입력하여 위에서 생성한 차단 규칙에 매칭되는지 시뮬레이션하세요.</p>
+
+                    <textarea id="testInput" rows="3" oninput="runSandboxTest()"
+                        class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-mono mb-3"
+                        placeholder="테스트할 문자메시지 입력... 예: [국*민*비*서] 범칙금 미납 확인 요망 http://sp-gov.top"></textarea>
+
+                    <div id="testResultBox" class="p-3.5 rounded-lg border bg-slate-900/80 border-slate-800 flex flex-col gap-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold text-slate-300">탐지 결과:</span>
+                            <span id="testStatusBadge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-800 text-slate-400">대기 중</span>
+                        </div>
+                        <div id="testHighlightedContent" class="text-xs font-mono bg-slate-950 p-2.5 rounded border border-slate-800/80 leading-relaxed text-slate-300 min-h-[48px]">
+                            입력된 문구가 정규식 패턴과 비교됩니다.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Custom Notification Toast -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-800 text-slate-100 border border-brand-500/40 px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 transition-all duration-300 opacity-0 transform translate-y-4 pointer-events-none z-50">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-brand-400 text-base"></i>
+        <span id="toastMessage" class="text-xs font-medium">메시지가 복사되었습니다.</span>
+    </div>
+
+    <script>
+        let generatedVariantsList = [];
+        let activeRegexObj = null;
+
+        // Hangul Jamo Decomposition Tables
+        const CHOSUNG = ['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+        const JUNGSUNG = ['ㅏ','ㅐ','ㅑ','ㅒ','ㅓ','ㅔ','ㅕ','ㅖ','ㅗ','ㅘ','ㅙ','ㅚ','ㅛ','ㅜ','ㅝ','ㅞ','ㅟ','ㅠ','ㅡ','ㅢ','ㅣ'];
+        const JONGSUNG = ['','ㄱ','ㄲ','ㄳ','ㄴ','ㄵ','ㄶ','ㄷ','ㄹ','ㄺ','ㄻ','ㄼ','ㄽ','ㄾ','ㄿ','ㅀ','ㅁ','ㅂ','ㅄ','ㅅ','ㅆ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+
+        // Typo & Soundalike Mapping
+        const TYPO_MAP = {
+            '택': ['탞', '톅', '탁', '탹'],
+            '배': ['뱨', '베', '볘', '벼'],
+            '송': ['쏭', '솧', '숑'],
+            '국': ['뮥', '귝', '꾿', '꾺'],
+            '민': ['믠', '믲', '믜'],
+            '비': ['빋', '빐', '븨'],
+            '서': ['서', '셔', '써'],
+            '통': ['툥', '퉁'],
+            '지': ['찌', '쥐'],
+            '확': ['훡', '홧'],
+            '인': ['읜', '읹'],
+            '클': ['킗', '큘'],
+            '릭': ['릑', '릨']
+        };
+
+        // Presets
+        const PRESETS = {
+            courier: "[CJ대한통운] 도로명 주소지 불명확으로 물품 미배송 보관 중. 주소 수정 확인: http://cj-logis.xyz/addr",
+            gov: "[국민비서] 귀하의 종합소득세 환급금 신청 안내. 미수령 환급금 428,000원 확인하기: http://korea-tax.top/claim",
+            traffic: "[경찰청] 교통법규 위반 과태료 미납 통지서 발행. 위반내역 조회: http://efine-police.site/check"
+        };
+
+        function decomposeHangul(char) {
+            const code = char.charCodeAt(0) - 0xAC00;
+            if (code < 0 || code > 11172) return [char];
+            const cho = Math.floor(code / 588);
+            const jung = Math.floor((code - (cho * 588)) / 28);
+            const jong = code % 28;
+            return [CHOSUNG[cho], JUNGSUNG[jung], JONGSUNG[jong]];
+        }
+
+        function loadPreset(type) {
+            if (PRESETS[type]) {
+                document.getElementById('smishingInput').value = PRESETS[type];
+                generateAll();
+                showToast("프리셋 문구가 로드되었습니다.", "info");
+            }
+        }
+
+        function clearInput() {
+            document.getElementById('smishingInput').value = '';
+            document.getElementById('keywordChips').innerHTML = '<span class="text-xs text-slate-500 italic py-0.5">문구를 입력하면 핵심 차단 단어가 추출됩니다.</span>';
+            document.getElementById('keywordCount').innerText = '0개 감지';
+            document.getElementById('pcreRegexOutput').innerText = '규칙을 생성하려면 좌측의 [생성하기] 버튼을 누르세요.';
+            document.getElementById('smsGatewayOutput').innerText = '-';
+            document.getElementById('snortRuleOutput').innerText = '-';
+            document.getElementById('variantsContainer').innerHTML = '<div class="p-4 text-center text-xs text-slate-500">생성된 변종 문구가 여기에 표시됩니다.</div>';
+            generatedVariantsList = [];
+            document.getElementById('variantBadgeCount').innerText = '0';
+        }
+
+        function extractKeywords(text) {
+            if (!text.trim()) return [];
+            
+            // Clean text and extract significant Nouns / Keywords
+            const cleaned = text.replace(/https?:\/\/\S+/gi, '').replace(/[^\w\s가-힣]/g, ' ');
+            const words = cleaned.split(/\s+/).filter(w => w.length >= 2);
+            
+            // Priority security keywords list
+            const priorityList = ['국민비서', '교통범칙금', '대한통운', '우체국', '배송지', '주소지', '과태료', '환급금', '경찰청', '미납', '통지서', '검찰청', '소환장', '청첩장', '부고'];
+            
+            let detected = new Set();
+            
+            // Direct matching priority list
+            priorityList.forEach(p => {
+                if (text.includes(p)) detected.add(p);
+            });
+
+            // Add other distinct words
+            words.forEach(w => {
+                if (w.length >= 2 && !['안내', '확인', '내용', '귀하', '발행', '수정'].includes(w)) {
+                    detected.add(w);
+                }
+            });
+
+            return Array.from(detected).slice(0, 5); // Pick top 5 key terms
+        }
+
+        function buildCharRegex(char, sensitivity) {
+            // Build regex for a single Hangul syllable matching its variants
+            const separators = sensitivity === 1 ? '[\\s\\._\\-]*' : (sensitivity === 2 ? '[\\s\\._\\-\\*\\#\\&\\~]*' : '[\\s\\W_]*');
+            
+            let charClass = [char];
+            
+            if (TYPO_MAP[char]) {
+                charClass.push(...TYPO_MAP[char]);
+            }
+
+            // Add Jamo variant if enabled
+            const jamo = decomposeHangul(char);
+            if (jamo.length >= 2) {
+                const jamoStr = jamo.join('');
+                charClass.push(jamoStr);
+            }
+
+            const pattern = charClass.length > 1 ? `(?:${charClass.join('|')})` : char;
+            return pattern + separators;
+        }
+
+        function generateAll() {
+            const input = document.getElementById('smishingInput').value.trim();
+            if (!input) {
+                showToast("스미싱 문구를 입력해 주세요.", "warning");
+                return;
+            }
+
+            const optSpecial = document.getElementById('optSpecialChars').checked;
+            const optJamo = document.getElementById('optJamo').checked;
+            const optTypo = document.getElementById('optTypo').checked;
+            const optUrl = document.getElementById('optUrl').checked;
+            const sensitivity = parseInt(document.getElementById('sensitivityRange').value);
+
+            // 1. Keyword Extraction
+            const keywords = extractKeywords(input);
+            const chipContainer = document.getElementById('keywordChips');
+            
+            if (keywords.length > 0) {
+                chipContainer.innerHTML = keywords.map(k => `
+                    <span class="px-2 py-0.5 rounded bg-brand-500/20 text-brand-300 border border-brand-500/30 text-xs font-mono flex items-center gap-1">
+                        <i class="fa-solid fa-hashtag text-[10px] text-brand-400"></i>${k}
+                    </span>
+                `).join('');
+                document.getElementById('keywordCount').innerText = `${keywords.length}개 핵심키워드`;
+            } else {
+                chipContainer.innerHTML = `<span class="text-xs text-slate-400 font-mono">${input.slice(0, 20)}...</span>`;
+                document.getElementById('keywordCount').innerText = '전체 문장 적용';
+            }
+
+            // 2. Build Regex
+            let regexParts = [];
+            const targetTerms = keywords.length > 0 ? keywords : [input.replace(/[^\w가-힣]/g, '').slice(0, 10)];
+
+            targetTerms.forEach(term => {
+                let termPattern = "";
+                for (let i = 0; i < term.length; i++) {
+                    const c = term[i];
+                    termPattern += buildCharRegex(c, sensitivity);
+                }
+                regexParts.push(`(${termPattern})`);
+            });
+
+            let fullRegexStr = `(?i)(?:${regexParts.join('|')})`;
+            if (optUrl) {
+                fullRegexStr += `|(?i)(https?:\\/\\/[a-z0-9\\.-]+\\.(?:top|xyz|site|cc|me|icu font|live|link|work|tech)\\b)`;
+            }
+
+            // Save active Regex for Sandbox
+            try {
+                activeRegexObj = new RegExp(fullRegexStr.replace(/\(\?i\)/g, ''), 'gi');
+            } catch (e) {
+                console.error("Regex build error", e);
+            }
+
+            // Render PCRE Regex
+            document.getElementById('pcreRegexOutput').innerText = fullRegexStr;
+
+            // Render SMS Gateway Bulk Text Rule
+            const smsKeywords = targetTerms.map(t => {
+                if (!optSpecial) return t;
+                return [
+                    t,
+                    t.split('').join('.'),
+                    t.split('').join('*'),
+                    t.split('').join(' ')
+                ].join(', ');
+            }).join(', ');
+            document.getElementById('smsGatewayOutput').innerText = `[SMS 필터링 차단등록 서식]\n차단키워드=${smsKeywords}\n유사패턴=ON, URL자동차단=ON`;
+
+            // Render Snort/Suricata IDPS Rule
+            const snortContent = targetTerms.map(t => `content:"${t}"; nocase;`).join(' ');
+            const snortRule = `alert pcre any any -> any any (msg:"SEC_SMISHING_DETECTED_VARIANTS"; pcre:"/${fullRegexStr.replace(/\(\?i\)/g, '')}/i"; ${snortContent} classtype:trojan-activity; sid:9000101; rev:1;)`;
+            document.getElementById('snortRuleOutput').innerText = snortRule;
+
+            // 3. Generate Mutated Synthetic Variants
+            generatedVariantsList = createSyntheticMutations(input, targetTerms, { optSpecial, optJamo, optTypo, optUrl });
+            renderVariantsList(generatedVariantsList);
+            document.getElementById('variantBadgeCount').innerText = generatedVariantsList.length;
+            document.getElementById('statVariantsCount').innerText = `${generatedVariantsList.length}개`;
+
+            // Auto Run Test if Sandbox has input
+            if (document.getElementById('testInput').value.trim()) {
+                runSandboxTest();
+            }
+
+            showToast("변종 패턴 및 차단 정규식이 성공적으로 생성되었습니다.", "success");
+        }
+
+        function createSyntheticMutations(originalText, keywords, options) {
+            let variants = [];
+            const separators = ['.', '*', ' ', '_', '-'];
+
+            // Original
+            variants.push({ text: originalText, type: "원본 샘플" });
+
+            keywords.forEach(kw => {
+                // 1. Special Char Injections
+                if (options.optSpecial) {
+                    separators.forEach(sep => {
+                        const mutatedKw = kw.split('').join(sep);
+                        variants.push({
+                            text: originalText.replace(kw, mutatedKw),
+                            type: `특수문자 삽입 [${sep}]`
+                        });
+                    });
+                }
+
+                // 2. Hangul Jamo Separations
+                if (options.optJamo) {
+                    let jamoKw = kw.split('').map(c => {
+                        const decomp = decomposeHangul(c);
+                        return decomp.length > 1 ? decomp.slice(0, 2).join('') : c;
+                    }).join('');
+                    
+                    variants.push({
+                        text: originalText.replace(kw, jamoKw),
+                        type: "자음/모음 부분 분리"
+                    });
+                }
+
+                // 3. Typo Substitutions
+                if (options.optTypo) {
+                    let typoKw = kw.split('').map(c => {
+                        if (TYPO_MAP[c]) return TYPO_MAP[c][0];
+                        return c;
+                    }).join('');
+
+                    if (typoKw !== kw) {
+                        variants.push({
+                            text: originalText.replace(kw, typoKw),
+                            type: "유사 음절 교체"
+                        });
+                    }
+                }
+            });
+
+            // 4. URL Variations
+            if (options.optUrl) {
+                const fakeTlds = ['top', 'xyz', 'site', 'me', 'icu', 'cc'];
+                fakeTlds.forEach(tld => {
+                    variants.push({
+                        text: originalText.replace(/https?:\/\/\S+/gi, `http://korea-sec-notice.${tld}/case`),
+                        type: `악성 TLD 우회 (.${tld})`
+                    });
+                });
+            }
+
+            return variants;
+        }
+
+        function renderVariantsList(variants) {
+            const container = document.getElementById('variantsContainer');
+            if (!variants || variants.length === 0) {
+                container.innerHTML = '<div class="p-4 text-center text-xs text-slate-500">생성된 변종 문구가 없습니다.</div>';
+                return;
+            }
+
+            container.innerHTML = variants.map((v, idx) => `
+                <div class="p-3 flex items-start justify-between gap-3 hover:bg-slate-800/50 transition">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 border border-slate-700">#${idx + 1}</span>
+                            <span class="text-[11px] px-1.5 py-0.5 rounded bg-brand-500/10 text-brand-300 border border-brand-500/20 font-medium">${v.type}</span>
+                        </div>
+                        <div class="text-xs font-mono text-slate-200 select-all break-all">${escapeHtml(v.text)}</div>
+                    </div>
+                    <button onclick="copySingleText('${escapeJsString(v.text)}')" class="text-slate-400 hover:text-brand-400 p-1 transition">
+                        <i class="fa-regular fa-copy text-xs"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function runSandboxTest() {
+            const testText = document.getElementById('testInput').value.trim();
+            const statusBadge = document.getElementById('testStatusBadge');
+            const resultBox = document.getElementById('testHighlightedContent');
+
+            if (!testText) {
+                statusBadge.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-800 text-slate-400";
+                statusBadge.innerText = "대기 중";
+                resultBox.innerHTML = "입력된 문구가 정규식 패턴과 비교됩니다.";
+                return;
+            }
+
+            if (!activeRegexObj) {
+                statusBadge.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30";
+                statusBadge.innerText = "규칙 없음";
+                resultBox.innerHTML = "우측 상단의 [생성하기] 버튼을 먼저 실행하세요.";
+                return;
+            }
+
+            // Test regex match
+            const isMatched = activeRegexObj.test(testText);
+            activeRegexObj.lastIndex = 0; // reset regex state
+
+            if (isMatched) {
+                statusBadge.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30 animate-pulse";
+                statusBadge.innerHTML = '<i class="fa-solid fa-shield-virus mr-1"></i> 차단 성공 (Matched)';
+                
+                // Highlight matches
+                const highlighted = testText.replace(activeRegexObj, (match) => `<mark class="highlight-match">${escapeHtml(match)}</mark>`);
+                resultBox.innerHTML = highlighted;
+            } else {
+                statusBadge.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+                statusBadge.innerHTML = '<i class="fa-solid fa-circle-check mr-1"></i> 미차단 (Bypassed)';
+                resultBox.innerHTML = escapeHtml(testText) + ' <span class="text-[11px] text-amber-400 ml-2">(우회됨: 정규식 강도를 높이거나 키워드를 추가하세요)</span>';
+            }
+        }
+
+        function switchTab(tab) {
+            document.getElementById('tabRegex').classList.add('hidden');
+            document.getElementById('tabVariants').classList.add('hidden');
+            document.getElementById('tabSandbox').classList.add('hidden');
+
+            document.getElementById('tabBtn1').className = "px-4 py-2 text-xs font-semibold rounded-t-lg bg-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2";
+            document.getElementById('tabBtn2').className = "px-4 py-2 text-xs font-semibold rounded-t-lg bg-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2";
+            document.getElementById('tabBtn3').className = "px-4 py-2 text-xs font-semibold rounded-t-lg bg-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2";
+
+            if (tab === 'regex') {
+                document.getElementById('tabRegex').classList.remove('hidden');
+                document.getElementById('tabBtn1').className = "px-4 py-2 text-xs font-semibold rounded-t-lg bg-cyber-card border-t border-x border-cyber-border text-brand-400 flex items-center gap-2";
+            } else if (tab === 'variants') {
+                document.getElementById('tabVariants').classList.remove('hidden');
+                document.getElementById('tabBtn2').className = "px-4 py-2 text-xs font-semibold rounded-t-lg bg-cyber-card border-t border-x border-cyber-border text-brand-400 flex items-center gap-2";
+            } else if (tab === 'sandbox') {
+                document.getElementById('tabSandbox').classList.remove('hidden');
+                document.getElementById('tabBtn3').className = "px-4 py-2 text-xs font-semibold rounded-t-lg bg-cyber-card border-t border-x border-cyber-border text-brand-400 flex items-center gap-2";
+            }
+        }
+
+        function copyToClipboard(elementId) {
+            const text = document.getElementById(elementId).innerText;
+            if (!text || text === '-') return;
+
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+
+            showToast("클립보드에 복사되었습니다.", "success");
+        }
+
+        function copySingleText(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+
+            showToast("변종 문구가 복사되었습니다.", "success");
+        }
+
+        function copyAllVariants() {
+            if (generatedVariantsList.length === 0) return;
+            const fullListStr = generatedVariantsList.map(v => `${v.type}\t${v.text}`).join('\n');
+            const textarea = document.createElement('textarea');
+            textarea.value = fullListStr;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+
+            showToast("전체 변종 리스트가 복사되었습니다.", "success");
+        }
+
+        function exportData(type) {
+            if (generatedVariantsList.length === 0) {
+                showToast("내보낼 데이터가 없습니다. 먼저 패턴을 생성하세요.", "warning");
+                return;
+            }
+
+            let fileContent = "";
+            let fileName = `smishing_rules_${new Date().toISOString().slice(0,10)}`;
+
+            if (type === 'csv') {
+                fileContent = "Index,Type,MutatedText\n" + generatedVariantsList.map((v, i) => `${i+1},"${v.type}","${v.text.replace(/"/g, '""')}"`).join('\n');
+                fileName += ".csv";
+            } else if (type === 'snort') {
+                fileContent = document.getElementById('snortRuleOutput').innerText;
+                fileName += ".rules";
+            }
+
+            const blob = new Blob([fileContent], { type: 'text/plain;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", fileName);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast(`${fileName} 파일이 다운로드되었습니다.`, "success");
+        }
+
+        function showToast(message, type = "info") {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastMessage.innerText = message;
+
+            if (type === "success") {
+                toastIcon.className = "fa-solid fa-circle-check text-emerald-400 text-base";
+            } else if (type === "warning") {
+                toastIcon.className = "fa-solid fa-triangle-exclamation text-amber-400 text-base";
+            } else {
+                toastIcon.className = "fa-solid fa-circle-info text-brand-400 text-base";
+            }
+
+            toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+            toast.classList.add('opacity-100', 'translate-y-0');
+
+            setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+            }, 2500);
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        }
+
+        function escapeJsString(str) {
+            return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+        }
+
+        // Initialize with default preset
+        window.onload = function() {
+            loadPreset('courier');
+        };
+    </script>
+</body>
+</html>
